@@ -191,6 +191,7 @@ const (
 	// Datadog tag format.
 	// See http://docs.datadoghq.com/guides/metrics/#tags
 	Datadog
+	Graphite
 )
 
 var (
@@ -224,6 +225,18 @@ var (
 			}
 			return buf.String()
 		},
+		// Graphite tag format: ;tag1=value1;tag2=value2
+		// https://graphite.readthedocs.io/en/latest/tags.html
+		Graphite: func(tags []tag) string {
+			var buf bytes.Buffer
+			for _, tag := range tags {
+				_ = buf.WriteByte(';')
+				_, _ = buf.WriteString(tag.K)
+				_ = buf.WriteByte('=')
+				_, _ = buf.WriteString(tag.V)
+			}
+			return buf.String()
+		},
 	}
 	splitFuncs = map[TagFormat]func(string) []tag{
 		InfluxDB: func(s string) []tag {
@@ -242,6 +255,16 @@ var (
 			tags := make([]tag, len(pairs))
 			for i, pair := range pairs {
 				kv := strings.Split(pair, ":")
+				tags[i] = tag{K: kv[0], V: kv[1]}
+			}
+			return tags
+		},
+		Graphite: func(s string) []tag {
+			s = s[1:]
+			pairs := strings.Split(s, ";")
+			tags := make([]tag, len(pairs))
+			for i, pair := range pairs {
+				kv := strings.Split(pair, "=")
 				tags[i] = tag{K: kv[0], V: kv[1]}
 			}
 			return tags
